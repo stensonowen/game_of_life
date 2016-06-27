@@ -1,6 +1,6 @@
 // requires nightly:
-#![feature(test)]
-extern crate test;
+//#![feature(test)]
+//extern crate test;
 
 extern crate rand;
 
@@ -10,39 +10,15 @@ use std::collections::HashSet;
 // either   type Point = (i32,i32)
 // or       Struct Point (i32,i32)
 #[derive(Eq, PartialEq, Hash)]
-struct Point {
-    x: i32,
-    y: i32,
-}
+struct Point(i32,i32);  //(x,y)
 
 
 impl Point {
-    fn get_neighbors(&self) -> Vec<Point> {
-        vec![
-            Point{x:self.x-1, y:self.y+1},
-            Point{x:self.x  , y:self.y+1},
-            Point{x:self.x+1, y:self.y+1},
-
-            Point{x:self.x-1, y:self.y  },
-            Point{x:self.x+1, y:self.y  },
-
-            Point{x:self.x-1, y:self.y-1},
-            Point{x:self.x  , y:self.y-1},
-            Point{x:self.x+1, y:self.y-1}]
-    }
-
-    fn get_neighbors2(&self) -> [Point; 8] {
-        //on stack instead
-           [Point{x:self.x-1, y:self.y+1},
-            Point{x:self.x  , y:self.y+1},
-            Point{x:self.x+1, y:self.y+1},
-
-            Point{x:self.x-1, y:self.y  },
-            Point{x:self.x+1, y:self.y  },
-
-            Point{x:self.x-1, y:self.y-1},
-            Point{x:self.x  , y:self.y-1},
-            Point{x:self.x+1, y:self.y-1}]
+    fn get_neighbors(&self) -> Vec<Point> { //vs [Point;8] ?
+        let Point(x,y) = *self;
+        vec![   Point(x-1,y+1), Point(x  ,y+1), Point(x+1,y+1),
+                Point(x-1,y  ),                 Point(x+1,y  ),
+                Point(x-1,y-1), Point(x  ,y-1), Point(x+1,y-1)]
     }
 }
 
@@ -57,39 +33,26 @@ struct Board {
 
 
 impl Board {
-    fn push1(&mut self, p: &Point) {
-        self.min = Point {
-            x: std::cmp::min(self.min.x, p.x),
-            y: std::cmp::min(self.min.y, p.y),
-        };
-        self.max = Point {
-            x: std::cmp::max(self.max.x, p.x),
-            y: std::cmp::max(self.max.y, p.y),
-        };
-    }
-
-    fn push2(&mut self, p: &Point) {
-        if p.x < self.min.x { self.min.x = p.x; }
-        if p.y < self.min.y { self.min.y = p.y; }
-        if p.x < self.max.x { self.max.x = p.x; }
-        if p.y < self.max.y { self.max.y = p.y; }
-
-
+    fn push(&mut self, p: &Point) {
+        if p.0 < self.min.0 { self.min.0 = p.0; }
+        if p.1 < self.min.1 { self.min.1 = p.1; }
+        if p.0 < self.max.0 { self.max.0 = p.0; }
+        if p.1 < self.max.1 { self.max.1 = p.1; }
     }
 
     fn blank() -> Board {
         //basic shape: 1*3 block
         let mut life = Life::new();
-        life.insert(Point{x:-1, y:-1});
-        life.insert(Point{x:-1, y: 0});
-        life.insert(Point{x:-1, y: 1});
-        life.insert(Point{x: 1, y:-1});
-        life.insert(Point{x: 1, y: 0});
-        life.insert(Point{x: 1, y: 1});
+        life.insert(Point(-1, -1));
+        life.insert(Point(-1,  0));
+        life.insert(Point(-1,  1));
+        life.insert(Point( 1, -1));
+        life.insert(Point( 1,  0));
+        life.insert(Point( 1,  1));
 
         Board {
-            min: Point { x:-2, y:-2},
-            max: Point { x: 2, y: 2},
+            min: Point(-2,-2),
+            max: Point( 2, 2),
             cells: life
         }
 
