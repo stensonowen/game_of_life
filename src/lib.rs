@@ -1,5 +1,7 @@
+// requires nightly:
 #![feature(test)]
 extern crate test;
+
 extern crate rand;
 
 use std::collections::HashSet;
@@ -16,24 +18,37 @@ struct Point {
 
 impl Point {
     fn get_neighbors(&self) -> Vec<Point> {
-        [(-1, 1), ( 0, 1), ( 1, 1),
-         (-1, 0),          ( 1, 0),
-         (-1,-1), ( 0,-1), ( 1,-1),]
-             .iter()
-             .map(|&(dx,dy)| Point{x: self.x+dx, y: self.y+dy})
-             .collect()
+        //[(-1, 1), ( 0, 1), ( 1, 1),
+        // (-1, 0),          ( 1, 0),
+        // (-1,-1), ( 0,-1), ( 1,-1),]
+        //     .iter()
+        //     .map(|&(dx,dy)| Point{x: self.x+dx, y: self.y+dy})
+        //     .collect()
+        vec![
+            Point{x:self.x-1, y:self.y+1},
+            Point{x:self.x  , y:self.y+1},
+            Point{x:self.x+1, y:self.y+1},
+
+            Point{x:self.x-1, y:self.y  },
+            Point{x:self.x+1, y:self.y  },
+
+            Point{x:self.x-1, y:self.y-1},
+            Point{x:self.x  , y:self.y-1},
+            Point{x:self.x+1, y:self.y-1}]
     }
 
-    fn get_neighbors2(&self) -> [(i32,i32); 8] {
+    fn get_neighbors2(&self) -> [Point; 8] {
         //on stack instead
-        [(self.x-1, self.y+1),
-         (self.x  , self.y+1),
-         (self.x+1, self.y+1),
-         (self.x-1, self.y  ),
-         (self.x+1, self.y  ),
-         (self.x-1, self.y-1),
-         (self.x  , self.y-1),
-         (self.x+1, self.y-1)]
+           [Point{x:self.x-1, y:self.y+1},
+            Point{x:self.x  , y:self.y+1},
+            Point{x:self.x+1, y:self.y+1},
+
+            Point{x:self.x-1, y:self.y  },
+            Point{x:self.x+1, y:self.y  },
+
+            Point{x:self.x-1, y:self.y-1},
+            Point{x:self.x  , y:self.y-1},
+            Point{x:self.x+1, y:self.y-1}]
     }
 }
 
@@ -95,17 +110,35 @@ impl Board {
 #[cfg(test)]
 mod tests {
 
-    use super::*;
-    use test::Bencher;
+    //use super::*;
     use rand;
     use super::Point;
     use super::Board;
 
     #[test]
     fn it_works() {
+
     }
 
+    use test::Bencher;
+    //benchmarks require nightly
     #[bench]
+    fn gn1(b: &mut Bencher) {
+        let (x,y) = rand::random::<(i32,i32)>(); 
+        let p = Point{x:x, y:y};
+        b.iter(|| {
+            let _ = p.get_neighbors();
+        });
+    }
+    #[bench]
+    fn gn2(b: &mut Bencher) {
+        let (x,y) = rand::random::<(i32,i32)>(); 
+        let p = Point{x:x, y:y};
+        b.iter(|| {
+            let _ = p.get_neighbors2();
+        });
+    }
+    //#[bench]
     fn bm_push1(b: &mut Bencher) {
         //65 ns/iter +/- 6
         let mut brd = super::Board::blank();
@@ -114,7 +147,7 @@ mod tests {
             brd.push1(&Point{x:x,y:y});
         });
     }
-    #[bench]
+    //#[bench]
     fn bm_push2(b: &mut Bencher) {
         //63 ns/iter +/- 2
         let mut brd = super::Board::blank();
