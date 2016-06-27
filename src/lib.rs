@@ -18,12 +18,6 @@ struct Point {
 
 impl Point {
     fn get_neighbors(&self) -> Vec<Point> {
-        //[(-1, 1), ( 0, 1), ( 1, 1),
-        // (-1, 0),          ( 1, 0),
-        // (-1,-1), ( 0,-1), ( 1,-1),]
-        //     .iter()
-        //     .map(|&(dx,dy)| Point{x: self.x+dx, y: self.y+dy})
-        //     .collect()
         vec![
             Point{x:self.x-1, y:self.y+1},
             Point{x:self.x  , y:self.y+1},
