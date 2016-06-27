@@ -1,5 +1,7 @@
+// requires nightly:
 #![feature(test)]
 extern crate test;
+
 extern crate rand;
 
 use std::collections::HashSet;
@@ -95,17 +97,35 @@ impl Board {
 #[cfg(test)]
 mod tests {
 
-    use super::*;
-    use test::Bencher;
+    //use super::*;
     use rand;
     use super::Point;
     use super::Board;
 
     #[test]
     fn it_works() {
+
     }
 
+    use test::Bencher;
+    //benchmarks require nightly
     #[bench]
+    fn gn1(b: &mut Bencher) {
+        let (x,y) = rand::random::<(i32,i32)>(); 
+        let p = Point{x:x, y:y};
+        b.iter(|| {
+            let _ = p.get_neighbors();
+        });
+    }
+    #[bench]
+    fn gn2(b: &mut Bencher) {
+        let (x,y) = rand::random::<(i32,i32)>(); 
+        let p = Point{x:x, y:y};
+        b.iter(|| {
+            let _ = p.get_neighbors2();
+        });
+    }
+    //#[bench]
     fn bm_push1(b: &mut Bencher) {
         //65 ns/iter +/- 6
         let mut brd = super::Board::blank();
@@ -114,7 +134,7 @@ mod tests {
             brd.push1(&Point{x:x,y:y});
         });
     }
-    #[bench]
+    //#[bench]
     fn bm_push2(b: &mut Bencher) {
         //63 ns/iter +/- 2
         let mut brd = super::Board::blank();
