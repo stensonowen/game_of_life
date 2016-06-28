@@ -8,7 +8,7 @@ extern crate terminal_size;
 use std::collections::{HashSet,HashMap};
 
 #[derive(Eq, PartialEq, Hash, Clone, Debug)]
-pub struct Point(i32,i32);  //(x,y)
+pub struct Point(pub i32, pub i32);  //(x,y)
 
 
 impl Point {
@@ -23,6 +23,12 @@ impl Point {
         vec![   Point(x-1,y+1), Point(x  ,y+1), Point(x+1,y+1),
                 Point(x-1,y  ),                 Point(x+1,y  ),
                 Point(x-1,y-1), Point(x  ,y-1), Point(x+1,y-1)]
+    }
+    pub fn min() -> Point {
+        Point(std::i32::MAX,std::i32::MAX)
+    }
+    pub fn max() -> Point {
+        Point(std::i32::MIN,std::i32::MIN)
     }
 }
 
@@ -39,6 +45,14 @@ pub struct Board {
 
 impl Board {
 
+    pub fn new() -> Board {
+        Board {
+            min:    Point::min(),
+            max:    Point::max(),
+            alive:  Cells::new(),
+        }
+    }
+
     pub fn push(&mut self, p: &Point) {
         if p.0 < self.min.0 { self.min.0 = p.0; }
         if p.1 < self.min.1 { self.min.1 = p.1; }
@@ -51,8 +65,8 @@ impl Board {
         //update everything that has to be updated
         // keep track of which cells live on to the next tick
         let mut new_board = Board {
-            min:    Point(0,0),
-            max:    Point(0,0),
+            min:    Point::min(),
+            max:    Point::max(),
             alive:  Cells::with_capacity(self.alive.len()),
         };
         // keep track of which dead cells might become alive
@@ -60,7 +74,7 @@ impl Board {
         //check on each living cell
         for cell in &self.alive {
             let neighbors: Vec<Point> = cell.neighbors();
-            let mut live_neighbors = 0;
+            let mut live_neighbors = 0u8;
             for p in &neighbors {
                 if self.alive.contains(&p) {
                     live_neighbors += 1;
@@ -107,14 +121,88 @@ impl Board {
 
     pub fn print(&self) {
         //TODO: use braille
+        // :YcmRestartServer ?
         use terminal_size::{Width, Height, terminal_size};
 
-        let size = terminal_size();
-        if let Some((Width(w), Height(h))) = size {
-            println!("Your terminal is {} cols wide and {} lines tall", w, h);
-        } else {
-            println!("Unable to get terminal size");
+        //let board_width = self.max.
+        let Point(min_x, min_y) = self.min;
+        let Point(max_x, max_y) = self.max;
+        let board_width     = max_x.checked_sub(min_x);
+        let board_height    = max_y.checked_sub(min_y);
+
+        if board_width.is_none() || board_height.is_none() 
+                || board_height.unwrap() > std::u16::MAX as i32 
+                || board_width.unwrap()  > std::u16::MAX as i32 {
+            println!("Board is too big to print;");
+            return;
         }
+        let board_width  =  board_width.unwrap() as u16;
+        let board_height = board_height.unwrap() as u16;
+
+        let term_size = terminal_size();
+        if term_size.is_none() {
+            println!("Failed to fetch terminal size;");
+            return;
+        }
+        let (Width(term_width), Height(term_height)) = term_size.unwrap();
+
+        assert!(term_width  >  board_width);
+        assert!(term_height > board_height);
+
+        let x_buf = (term_width  -  board_width) / 2;
+        let y_buf = (term_height - board_height) / 2;
+
+        let mut s = String::with_capacity(term_width as usize
+                                        * term_height as usize);
+
+        //print top spaces
+        for _ in 1..y_buf {         s.push_str("\n");   }
+
+        //print top line
+        for _ in 1..x_buf {         s.push_str(" ");    }
+        s.push_str("+");
+        for _ in 0..board_width+1 { s.push_str("-");    }
+        s.push_str("+\n");
+
+        //print remainder of board (including vertical lines
+        //for y in 0..board_height {
+        for y in self.min.1 .. self.max.1+1 {
+            for _ in 1..x_buf {     s.push_str(" ");    }
+            s.push_str("|");
+            //for x in 0..board_width {
+            for x in self.min.0 .. self.max.0+1 {
+                let p = Point(x as i32, y as i32);
+                if self.alive.contains(&p) {
+                    s.push_str("X");
+                } else {
+                    s.push_str(" ");
+                }
+            }
+            s.push_str("|\n");
+        }
+
+        //print bottom line
+        for _ in 1..x_buf {         s.push_str(" ");    }
+        s.push_str("+");
+        for _ in 0..board_width+1 { s.push_str("-");    }
+        s.push_str("+\n");
+            
+        for _ in 1..y_buf {         s.push_str("\n");   }
+
+
+        //braille version:
+        //assert!(2.0 * term_width  as f64 >  board_width);
+        //assert!(4.0 * term_height as f64 > board_height);
+        println!("board min: ({}, {})", self.min.0, self.min.1);
+        println!("board max: ({}, {})", self.max.0, self.max.1);
+        println!("board width: {}", board_width);
+        println!("board heiht: {}", board_height);
+        println!("term width:  {}", term_width);
+        println!("term height: {}", term_height);
+
+        
+        print!("{}", s);
+
 
     }
         
@@ -135,11 +223,7 @@ mod tests {
     #[test]
     fn pattern_block() {
         //2x2 square should stay the same
-        let mut b = Board {
-            min:    Point(0,0),
-            max:    Point(0,0),
-            alive:  Cells::new() 
-        };
+        let mut b = Board::new();
         b.push(&Point(0,0));
         b.push(&Point(0,1));
         b.push(&Point(1,1));
@@ -151,11 +235,7 @@ mod tests {
     fn pattern_loaf() {
         //https://en.wikipedia.org/wiki/File:Game_of_life_loaf.svg
         //static ~4 x ~4 pattern
-        let mut b = Board {
-            min:    Point(0,0),
-            max:    Point(0,0),
-            alive:  Cells::new() 
-        };
+        let mut b = Board::new();
         b.push(&Point(1,3));
         b.push(&Point(2,2));
         b.push(&Point(3,1));
@@ -171,11 +251,7 @@ mod tests {
         //https://en.wikipedia.org/wiki/File:Game_of_life_blinker.gif
         //a 1x3 block that rotates 90 degrees every 1 iteration
         //also test min/max behavior
-        let mut b1 = Board {
-            min:    Point(0,0),
-            max:    Point(0,0),
-            alive:  Cells::new() 
-        };
+        let mut b1 = Board::new();
         b1.push(&Point(0,-1));
         b1.push(&Point(0, 0));
         b1.push(&Point(0, 1));
