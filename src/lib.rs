@@ -3,11 +3,12 @@
 //extern crate test;
 
 extern crate rand;
+extern crate terminal_size;
 
 use std::collections::{HashSet,HashMap};
 
 #[derive(Eq, PartialEq, Hash, Clone, Debug)]
-struct Point(i32,i32);  //(x,y)
+pub struct Point(i32,i32);  //(x,y)
 
 
 impl Point {
@@ -29,7 +30,7 @@ impl Point {
 type Cells = HashSet<Point>;    //catalog of living colonies
 
 #[derive(Clone, PartialEq, Debug)]
-struct Board {
+pub struct Board {
     min  : Point,       //top-left corner of board
     max  : Point,       //top-right corner
     alive: Cells,
@@ -38,7 +39,7 @@ struct Board {
 
 impl Board {
 
-    fn push(&mut self, p: &Point) {
+    pub fn push(&mut self, p: &Point) {
         if p.0 < self.min.0 { self.min.0 = p.0; }
         if p.1 < self.min.1 { self.min.1 = p.1; }
         if p.0 > self.max.0 { self.max.0 = p.0; }
@@ -46,7 +47,7 @@ impl Board {
         self.alive.insert(Point::from_clone(p));
     }
 
-    fn iterate(self) -> Board {
+    pub fn iterate(self) -> Board {
         //update everything that has to be updated
         // keep track of which cells live on to the next tick
         let mut new_board = Board {
@@ -85,7 +86,7 @@ impl Board {
         new_board
     }
 
-    fn sample() -> Board {
+    pub fn sample() -> Board {
         //basic shape: 2 1x3 blocks
         let mut cells = Cells::new();
         cells.insert(Point(-1, -1));
@@ -104,7 +105,16 @@ impl Board {
     }
 
 
-    fn print() {
+    pub fn print(&self) {
+        //TODO: use braille
+        use terminal_size::{Width, Height, terminal_size};
+
+        let size = terminal_size();
+        if let Some((Width(w), Height(h))) = size {
+            println!("Your terminal is {} cols wide and {} lines tall", w, h);
+        } else {
+            println!("Unable to get terminal size");
+        }
 
     }
         
@@ -116,14 +126,11 @@ impl Board {
 mod tests {
 
     //use super::*;
-    use rand;
+    //use rand;
     use super::Point;
     use super::Board;
     use super::Cells;
 
-    #[test]
-    fn it_works() {
-    }
 
     #[test]
     fn pattern_block() {
@@ -184,6 +191,19 @@ mod tests {
     }
 
         
+    use test::Bencher;
+    use rand;
+    #[bench]
+    fn iter(ben: &mut Bencher) {
+        //10k cells takes 561 microseconds/iter
+        let mut b = Board::sample();
+        let max = 1000;
+        for _ in 0..10000 {
+            let (x,y) = rand::random::<(i32,i32)>();
+            b.push(&Point(x%max, y%max));
+        }
+        ben.iter(|| b.iter2());
+    }
 
     //use test::Bencher;
     //benchmarks require nightly
