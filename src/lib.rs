@@ -8,7 +8,7 @@ extern crate terminal_size;
 use std::collections::{HashSet,HashMap};
 
 #[derive(Eq, PartialEq, Hash, Clone, Debug)]
-pub struct Point(pub i32, pub i32);  //(x,y)
+struct Point(i32, i32);  //(x,y)
 
 
 impl Point {
@@ -24,11 +24,11 @@ impl Point {
                 Point(x-1,y  ),                 Point(x+1,y  ),
                 Point(x-1,y-1), Point(x  ,y-1), Point(x+1,y-1)]
     }
-    pub fn min() -> Point {
-        Point(std::i32::MAX,std::i32::MAX)
-    }
-    pub fn max() -> Point {
+    fn min() -> Point {
         Point(std::i32::MIN,std::i32::MIN)
+    }
+    fn max() -> Point {
+        Point(std::i32::MAX,std::i32::MAX)
     }
 }
 
@@ -47,13 +47,17 @@ impl Board {
 
     pub fn new() -> Board {
         Board {
-            min:    Point::min(),
-            max:    Point::max(),
+            min:    Point::max(),
+            max:    Point::min(),
             alive:  Cells::new(),
         }
     }
 
-    pub fn push(&mut self, p: &Point) {
+    pub fn push_pt(&mut self, x: i32, y: i32) {
+        self.push(&Point(x,y));
+    }
+
+    fn push(&mut self, p: &Point) {
         if p.0 < self.min.0 { self.min.0 = p.0; }
         if p.1 < self.min.1 { self.min.1 = p.1; }
         if p.0 > self.max.0 { self.max.0 = p.0; }
@@ -65,8 +69,8 @@ impl Board {
         //update everything that has to be updated
         // keep track of which cells live on to the next tick
         let mut new_board = Board {
-            min:    Point::min(),
-            max:    Point::max(),
+            min:    Point::max(),
+            max:    Point::min(),
             alive:  Cells::with_capacity(self.alive.len()),
         };
         // keep track of which dead cells might become alive
@@ -96,7 +100,6 @@ impl Board {
                 new_board.push(p);
             }
         }
-        
         new_board
     }
 
@@ -124,11 +127,10 @@ impl Board {
         // :YcmRestartServer ?
         use terminal_size::{Width, Height, terminal_size};
 
-        //let board_width = self.max.
         let Point(min_x, min_y) = self.min;
         let Point(max_x, max_y) = self.max;
-        let board_width     = max_x.checked_sub(min_x);
-        let board_height    = max_y.checked_sub(min_y);
+        let board_width  = max_x.checked_sub(min_x);
+        let board_height = max_y.checked_sub(min_y);
 
         if board_width.is_none() || board_height.is_none() 
                 || board_height.unwrap() > std::u16::MAX as i32 
@@ -164,19 +166,14 @@ impl Board {
         for _ in 0..board_width+1 { s.push_str("-");    }
         s.push_str("+\n");
 
-        //print remainder of board (including vertical lines
-        //for y in 0..board_height {
+        //print remainder of board (including vertical lines)
         for y in self.min.1 .. self.max.1+1 {
             for _ in 1..x_buf {     s.push_str(" ");    }
             s.push_str("|");
-            //for x in 0..board_width {
             for x in self.min.0 .. self.max.0+1 {
                 let p = Point(x as i32, y as i32);
-                if self.alive.contains(&p) {
-                    s.push_str("X");
-                } else {
-                    s.push_str(" ");
-                }
+                if self.alive.contains(&p) {    s.push_str("X");    }
+                else {                          s.push_str(" ");    }
             }
             s.push_str("|\n");
         }
@@ -185,25 +182,10 @@ impl Board {
         for _ in 1..x_buf {         s.push_str(" ");    }
         s.push_str("+");
         for _ in 0..board_width+1 { s.push_str("-");    }
-        s.push_str("+\n");
-            
+        s.push_str("+");
         for _ in 1..y_buf {         s.push_str("\n");   }
 
-
-        //braille version:
-        //assert!(2.0 * term_width  as f64 >  board_width);
-        //assert!(4.0 * term_height as f64 > board_height);
-        println!("board min: ({}, {})", self.min.0, self.min.1);
-        println!("board max: ({}, {})", self.max.0, self.max.1);
-        println!("board width: {}", board_width);
-        println!("board heiht: {}", board_height);
-        println!("term width:  {}", term_width);
-        println!("term height: {}", term_height);
-
-        
         print!("{}", s);
-
-
     }
         
 
