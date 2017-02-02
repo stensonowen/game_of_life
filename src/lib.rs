@@ -121,6 +121,9 @@ impl Board {
 
     }
 
+    pub fn size(&self) -> usize {
+        self.alive.len() 
+    }
 
     pub fn print(&self) {
         //TODO: use braille
